@@ -95,8 +95,16 @@ namespace ECS_Sound.Systems
                 var interactionId = CollisionSoundSystemUtils.GetInteractionId(collidedEntity, ref consumerInteractions);
                 var interaction = consumerInteractions[interactionId];
 
-                var physicsVelocity = PhysicsVelocityFromEntity[rayColliderInfo.Owner];
-                var impulse = GetImpulse(physicsVelocity, rayColliderInfo);
+                float impulse;
+                if (PhysicsVelocityFromEntity.HasComponent(rayColliderInfo.Owner))
+                {
+                    var physicsVelocity = PhysicsVelocityFromEntity[rayColliderInfo.Owner];
+                    impulse = GetImpulse(physicsVelocity, rayColliderInfo);
+                }
+                else
+                {
+                    impulse = MAX_SUM_LINEAR_VELOCITY_THRESHOLD * rayColliderInfo.MinSoundVelocity;
+                }
                 
                 if (CollisionSoundSystemUtils.IsTouchInteraction(interaction, ElapsedTime))
                 {
