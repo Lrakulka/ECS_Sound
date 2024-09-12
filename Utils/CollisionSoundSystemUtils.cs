@@ -1,4 +1,5 @@
 ﻿using ECS_Sound.Components;
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
@@ -6,6 +7,7 @@ using Unity.Transforms;
 
 namespace ECS_Sound.Utils
 {
+    [BurstCompile]
     public static class CollisionSoundSystemUtils
     {
         private const float MAX_SUM_LINEAR_VELOCITY_THRESHOLD = 25f;
