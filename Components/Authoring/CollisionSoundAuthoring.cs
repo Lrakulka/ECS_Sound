@@ -22,6 +22,8 @@ namespace ECS_Sound.Components.Authoring
                 AddComponent<CollisionSoundInteractionsComponent>(entity);
             }
             
+            if (authoring.configuration == null)
+                Debug.LogWarning($"{authoring} has incorrect collision sound configuration");
             AddComponent(entity, new CollisionSoundComponent
                 (
                     CollisionSoundConfigurationHub.GetAudioClipId(authoring.configuration.touchClip),
