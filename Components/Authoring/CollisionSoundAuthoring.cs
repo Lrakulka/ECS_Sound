@@ -11,6 +11,7 @@ namespace ECS_Sound.Components.Authoring
         public CollisionSoundConfiguration configuration;
     }
 
+#if UNITY_EDITOR
     public class CollisionSoundBaker : Baker<CollisionSoundAuthoring>
     {
         public override void Bake(CollisionSoundAuthoring authoring)
@@ -52,4 +53,5 @@ namespace ECS_Sound.Components.Authoring
             }
         }
     }
+#endif
 }

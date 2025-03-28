@@ -13,6 +13,7 @@ namespace ECS_Sound.Components.Authoring
         public LayerMask collidesWith;
     }
 
+#if UNITY_EDITOR
     public class RayColliderBaker : Baker<RayColliderAuthoring>
     {
         public override void Bake(RayColliderAuthoring authoring)
@@ -31,4 +32,5 @@ namespace ECS_Sound.Components.Authoring
             ));
         }
     }
+#endif
 }
