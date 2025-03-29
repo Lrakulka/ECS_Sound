@@ -12,6 +12,7 @@ namespace ECS_Sound.Systems
     // We are updating before `PhysicsSimulationGroup` - this means that we will get the events of the previous frame
     /*[UpdateBefore(typeof(PhysicsSimulationGroup))]
     [UpdateInGroup(typeof(PhysicsSystemGroup))]*/
+    [BurstCompile]
     public partial struct CollisionSoundSystem : ISystem
     {
         private ComponentLookup<LocalToWorld> lookupLocalToWorld;

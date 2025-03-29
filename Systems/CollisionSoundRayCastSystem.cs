@@ -10,6 +10,7 @@ using Unity.Transforms;
 namespace ECS_Sound.Systems
 {
     [UpdateInGroup(typeof(CollisionSoundSystemGroup))]
+    [BurstCompile]
     public partial struct CollisionSoundRayCastSystem : ISystem
     {
         private const float MAX_SUM_LINEAR_VELOCITY_THRESHOLD = 25f;
