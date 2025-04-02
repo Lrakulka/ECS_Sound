@@ -6,7 +6,6 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 namespace ECS_Sound.Systems
 {
@@ -83,7 +82,10 @@ namespace ECS_Sound.Systems
                 var configurationsHubGameObject = GameObject.Find("CollisionSoundConfigurationHub");
                 if (configurationsHubGameObject == null)
                 {
+#if UNITY_EDITOR
+                    // Throw a lot in profiler. Eat performance.
                     Debug.LogWarning("CollisionSoundConfigurationHub not found, sound not initialized");
+#endif
                     return;
                 }
                 configurationsHub = configurationsHubGameObject.GetComponent<CollisionSoundConfigurationHub>();
@@ -127,11 +129,13 @@ namespace ECS_Sound.Systems
                         {
                             localInteractionToPlaySoundList.Add(interaction);
                         }
+#if UNITY_EDITOR
                         else
                         {
+                            // Throw a lot in profiler. Eat performance.
                             Debug.LogWarning("Not enough space in AudioInteractionList, the interaction dropped");
                         }
-
+#endif
                         var maxClipDuration = HybridAudioUtils.GetAudioClipLength(
                             localAudioClipLengthMap[interaction.MainClipId],
                             localAudioSourcePitchMap[interaction.ConfigurationId]
