@@ -4,7 +4,6 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Physics;
-using Unity.Physics.Systems;
 using Unity.Transforms;
 
 namespace ECS_Sound.Systems
@@ -75,6 +74,7 @@ namespace ECS_Sound.Systems
             public ComponentLookup<ActiveSoundSourceComponent> ActiveSoundSourceFromEntity;
             public ComponentLookup<CollisionSoundInteractionsComponent> CollisionSoundInteractionsFromEntity;
 
+            [BurstCompile]
             public void Execute(CollisionEvent collisionEvent)
             {
                 GetCollidedEntities(in collisionEvent, out var activeSoundSourceEntity, out var soundSourceEntity);
