@@ -156,7 +156,9 @@ namespace ECS_Sound.Systems
                     } 
                     
                     activeSoundSource.interactionsIds = 0;
-                }).Schedule();
+                })
+                .WithName("CollisionSoundHybridAudioCollectionJob")
+                .Schedule();
         }
     }
 }
