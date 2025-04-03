@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using ECS_Common.Utils;
 using ECS_Sound.Components;
 using ECS_Sound.Utils;
 using Unity.Burst;
@@ -77,7 +79,7 @@ namespace ECS_Sound.Systems
                 var rayCastFrom = consumerLocalToWorld.Position;
                 var rayCastTo = consumerLocalToWorld.Position - consumerLocalToWorld.Up * RAY_CAST_MULTIPLIER;
 
-                if (!GetFirstCollision(rayCastFrom, rayCastTo, rayColliderInfo.Filter, out var hit)) return;
+                if (!CommonUtils.RayCast(rayCastFrom, rayCastTo, rayColliderInfo.Filter, ref PhysicsWorld.CollisionWorld, out var hit)) return;
                     
                 var collidedEntity = hit.Entity;
                 var contactPoint = hit.Position;
@@ -88,6 +90,7 @@ namespace ECS_Sound.Systems
                     contactPoint, isUsingSecondaryClip);
             }
             
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private void SetInteraction(in Entity consumerEntity, in Entity providerEntity, in Entity collidedEntity, 
                 in RayColliderInfoComponent rayColliderInfo, in LocalToWorld consumerLocalToWorld, 
                 in float3 contactPoint, bool isUsingSecondaryClip = false)
@@ -130,24 +133,13 @@ namespace ECS_Sound.Systems
                 CollisionSoundInteractionsFromEntity[consumerEntity] = consumerInteractions;
             }
 
+            [BurstCompile]
             private static float GetImpulse(in PhysicsVelocity physicsVelocity, in RayColliderInfoComponent rayColliderInfo)
             {
                 var impulse = math.max(
                     CollisionSoundSystemUtils.GetVelocityImpulse(physicsVelocity),
                     MAX_SUM_LINEAR_VELOCITY_THRESHOLD * rayColliderInfo.MinSoundVelocity);
                 return impulse;
-            }
-
-            private bool GetFirstCollision(in float3 rayFrom, in float3 rayTo, in CollisionFilter collisionFilter, 
-                out RaycastHit hit)
-            {
-                var input = new RaycastInput
-                {
-                    Start = rayFrom,
-                    End = rayTo,
-                    Filter = collisionFilter,
-                };
-                return PhysicsWorld.CollisionWorld.CastRay(input, out hit);
             }
         }
     }
