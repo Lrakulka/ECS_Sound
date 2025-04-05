@@ -43,7 +43,7 @@ namespace ECS_Sound.Components.Authoring
             if (collisionSoundConfigurations.Length != 1)
             {
                 // Build throw warning because CollisionSoundConfigurationHub is not exist yet (Ignore)
-                Debug.LogWarning($"Incorrect number of singleton CollisionSoundConfigurationHub {collisionSoundConfigurations}");
+                Debug.LogWarning($"Incorrect number of singleton CollisionSoundConfigurationHub {collisionSoundConfigurations.Length}");
                 return;
             }
             var configurations = collisionSoundConfigurations[0].configurationList;
