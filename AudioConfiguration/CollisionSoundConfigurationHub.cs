@@ -63,6 +63,7 @@ namespace ECS_Sound.AudioConfiguration
         
         public CollisionSoundConfiguration GetConfiguration(int configurationId)
         {
+            // If error here that such configurationId not exist most likely somebody forget to add configuration to CollisionSoundConfigurationHub 
             return configurations[configurationId];
         }
         
