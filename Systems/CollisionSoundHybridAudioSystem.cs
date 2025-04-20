@@ -1,3 +1,4 @@
+using ECS_Common.Utils;
 using ECS_Sound.AudioConfiguration;
 using ECS_Sound.Components;
 using ECS_Sound.Utils;
@@ -36,6 +37,7 @@ namespace ECS_Sound.Systems
                 {
                     var companionGameObject = new GameObject($"AudioSource for active CollisionSound {i}");
                     var audioSource = companionGameObject.AddComponent<AudioSource>();
+                    companionGameObject.AddComponent<AutoDisablePlayGameObject>();
                     audioSourcePull[i] = audioSource;
                 }
             }
@@ -97,12 +99,12 @@ namespace ECS_Sound.Systems
             {
                 HybridAudioUtils
                     .PlayClipSound(ref audioSourcesHub, interaction.ConfigurationId,
-                        interaction.MainClipId, interaction.VolumeScale, interaction.AverageContactPoint, configurationsHub);
+                        interaction.MainClipId, interaction.AverageContactPoint, configurationsHub);
                 if (interaction.SecondaryClipId != 0)
                 {
                     HybridAudioUtils
                         .PlayClipSound(ref audioSourcesHub, interaction.ConfigurationId,
-                            interaction.SecondaryClipId, interaction.VolumeScale, interaction.AverageContactPoint, configurationsHub);
+                            interaction.SecondaryClipId, interaction.AverageContactPoint, configurationsHub);
                 }
             }
             
