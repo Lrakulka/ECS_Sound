@@ -16,7 +16,6 @@ namespace ECS_Sound.Systems
     public partial struct CollisionSoundRayCastSystem : ISystem
     {
         private const float MAX_SUM_LINEAR_VELOCITY_THRESHOLD = 25f;
-        private const float RAY_CAST_MULTIPLIER = 0.05f;
 
         private ComponentLookup<PhysicsVelocity> lookupPhysicsVelocity;
         private ComponentLookup<CollisionSoundComponent> lookupCollisionSound;
@@ -77,7 +76,7 @@ namespace ECS_Sound.Systems
                 in RayColliderInfoComponent rayColliderInfo, in LocalToWorld consumerLocalToWorld)
             {
                 var rayCastFrom = consumerLocalToWorld.Position;
-                var rayCastTo = consumerLocalToWorld.Position - consumerLocalToWorld.Up * RAY_CAST_MULTIPLIER;
+                var rayCastTo = consumerLocalToWorld.Position - rayColliderInfo.RayLength;
 
                 if (!CommonUtils.RayCast(rayCastFrom, rayCastTo, rayColliderInfo.Filter, ref PhysicsWorld.CollisionWorld, out var hit)) return;
                     

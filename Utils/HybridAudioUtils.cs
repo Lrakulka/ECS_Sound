@@ -12,12 +12,20 @@ namespace ECS_Sound.Utils
             return audioSourcePitchAbs != 0f ? audioClipLength / audioSourcePitchAbs : 0f;
         }
         
-        public static void PlayClipSound(ref CollisionSoundHybridAudioSystem.AudioSourcesHub audioSourceHub, int configurationId, 
-            int audioClipId, in float3 position, in CollisionSoundConfigurationHub collisionSoundConfigurationHub)
+        public static bool PlayClipSound(ref CollisionSoundHybridAudioSystem.AudioSourcesHub audioSourceHub,
+            int configurationId, int audioClipId, in float3 position, float volume, 
+            in CollisionSoundConfigurationHub collisionSoundConfigurationHub,
+            out AudioSource audioSource)
         {
-            var audioSource = audioSourceHub.GetAudioSource();
-            
-            if (audioSource.isPlaying) return;
+            audioSource = audioSourceHub.GetAudioSource();
+
+            if (audioSource.isPlaying)
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning($"{audioSource} is still playing. Can't play sound");
+#endif
+                return false;
+            }
             
             audioSource.gameObject.SetActive(true);
             audioSource.transform.position = position;
@@ -26,8 +34,10 @@ namespace ECS_Sound.Utils
             SetConfiguration(ref audioSource, audioSourceConfiguration);
 
             // TODO: Make volumeScale - sound depend on impulse angle too, dot(velocity, normal)
+            audioSource.volume = volume;
             audioSource.clip = audioClip;
             audioSource.Play();
+            return true;
         }
 
         private static void SetConfiguration(ref AudioSource audioSource, in CollisionSoundConfiguration configuration)

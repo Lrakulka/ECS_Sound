@@ -47,6 +47,7 @@ namespace ECS_Sound.Utils
             interaction.VolumeScale = GetInteractionVolumeScale(impulse);
             interaction.AverageContactPoint = averageContactPoint;
             interaction.ConfigurationId = providerSound.ConfigurationId;
+            interaction.IsSliding = isSlidingClip;
             interaction.MainClipId = isSlidingClip ? consumerSound.SlideClipId : consumerSound.TouchClipId;
             if (isUsingSecondaryClip)
             {
@@ -83,7 +84,7 @@ namespace ECS_Sound.Utils
 
         private static float GetInteractionVolumeScale(float impact)
         {
-            return math.min(1f, impact / MAX_SUM_LINEAR_VELOCITY_THRESHOLD);
+            return math.min(impact / MAX_SUM_LINEAR_VELOCITY_THRESHOLD, 1f);
         }
     }
 }

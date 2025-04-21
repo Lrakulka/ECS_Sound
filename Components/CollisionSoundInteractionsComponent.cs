@@ -114,6 +114,7 @@ namespace ECS_Sound.Components
 
     public struct CollisionInteraction
     {
+        public bool IsSliding;
         public int MainClipId;
         public int SecondaryClipId;
         public int ConfigurationId; // Contains Id with configurations for clip play
