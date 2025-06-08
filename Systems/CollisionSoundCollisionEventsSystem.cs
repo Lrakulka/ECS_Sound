@@ -12,7 +12,7 @@ namespace ECS_Sound.Systems
     /*[UpdateBefore(typeof(PhysicsSimulationGroup))]
     [UpdateInGroup(typeof(PhysicsSystemGroup))]*/
     [BurstCompile]
-    public partial struct CollisionSoundSystem : ISystem
+    public partial struct CollisionSoundCollisionEventsSystem : ISystem
     {
         private ComponentLookup<LocalToWorld> lookupLocalToWorld;
         private ComponentLookup<PhysicsVelocity> lookupPhysicsVelocity;
@@ -45,7 +45,7 @@ namespace ECS_Sound.Systems
             lookupActiveSoundSource.Update(ref state);
             lookupCollisionSoundInteractions.Update(ref state);
             
-            state.Dependency = new CollisionSoundJob
+            state.Dependency = new CollisionSoundCollisionEventsJob
             {
                 ElapsedTime = elapsedTime,
                 PhysicsWorld = physicsWorldSingleton.PhysicsWorld,
@@ -58,7 +58,7 @@ namespace ECS_Sound.Systems
         }
     
         [BurstCompile]
-        private struct CollisionSoundJob : ICollisionEventsJob
+        private struct CollisionSoundCollisionEventsJob : ICollisionEventsJob
         {
             [ReadOnly]
             public double ElapsedTime;
