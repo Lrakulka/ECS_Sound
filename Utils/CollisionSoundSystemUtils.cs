@@ -1,4 +1,5 @@
 ﻿using ECS_Sound.Components;
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
@@ -6,12 +7,15 @@ using Unity.Transforms;
 
 namespace ECS_Sound.Utils
 {
+    
+    [BurstCompile]
     public static class CollisionSoundSystemUtils
     {
         private const float MAX_SUM_LINEAR_VELOCITY_THRESHOLD = 25f;
         private const float TOUCH_THRESHOLD_TIME = 0.1f;
         private const float SLIDING_DELTA = 0.01f;
-        
+
+        [BurstCompile]
         internal static int GetInteractionId(in Entity collidedEntity, ref CollisionSoundInteractionsComponent interactions)
         {
             var interactionId = interactions.GetInteractionId(collidedEntity);
@@ -24,6 +28,7 @@ namespace ECS_Sound.Utils
             return interactionId;
         }
 
+        [BurstCompile]
         private static int GetInteractionIdAfterCleaning(ref CollisionSoundInteractionsComponent interactions)
         {
             interactions.Clean();
@@ -32,6 +37,7 @@ namespace ECS_Sound.Utils
         }
 
         // TODO: simplify 
+        [BurstCompile]
         internal static void SetActiveInteraction(ref CollisionInteraction interaction, int interactionId,
             ref ComponentLookup<ActiveSoundSourceComponent> activeSoundSourceFromEntity,
             in ComponentLookup<CollisionSoundComponent> collisionSoundFromEntity, double time,
@@ -41,7 +47,7 @@ namespace ECS_Sound.Utils
             var consumerSound = collisionSoundFromEntity[consumerEntity];
             var providerSound = collisionSoundFromEntity[providerEntity];
             var activeSoundSource = activeSoundSourceFromEntity[consumerEntity];
-            
+
             interaction.PlayClipEndTime = time;
             interaction.CollisionEntity = collidedEntity;
             interaction.VolumeScale = GetInteractionVolumeScale(impulse);
@@ -58,6 +64,7 @@ namespace ECS_Sound.Utils
             activeSoundSourceFromEntity[consumerEntity] = activeSoundSource;
         }
 
+        [BurstCompile]
         internal static float GetVelocityImpulse(in PhysicsVelocity physicsVelocity)
         {
             return math.csum(math.abs(physicsVelocity.Linear));
@@ -65,16 +72,19 @@ namespace ECS_Sound.Utils
 
         // TODO: Fix method logic, this approach is not reliable, if update cycle was long it will trigger it
         // if TOUCH_THRESHOLD_TIME to large then some hits will be missed
+        [BurstCompile]
         internal static bool IsTouchInteraction(in CollisionInteraction interaction, double time)
         {
             return (time - interaction.UpdatedTime) > TOUCH_THRESHOLD_TIME;
         }
 
+        [BurstCompile]
         internal static bool IsPreviousSoundPlay(in CollisionInteraction interaction, double time)
         {
             return interaction.PlayClipEndTime < time;
         }
-        
+
+        [BurstCompile]
         internal static bool IsSliding(in CollisionInteraction interaction, in LocalToWorld currLocalToWorld)
         {
             var localToWorld = interaction.EntityToWorld;
@@ -82,6 +92,7 @@ namespace ECS_Sound.Utils
                    || math.any(math.abs(localToWorld.Rotation.value - currLocalToWorld.Rotation.value) > SLIDING_DELTA);
         }
 
+        [BurstCompile]
         private static float GetInteractionVolumeScale(float impact)
         {
             return math.min(impact / MAX_SUM_LINEAR_VELOCITY_THRESHOLD, 1f);

@@ -1,6 +1,7 @@
 ﻿using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using System.Runtime.InteropServices;
 
 namespace ECS_Sound.Components
 {
@@ -114,6 +115,7 @@ namespace ECS_Sound.Components
 
     public struct CollisionInteraction
     {
+        [MarshalAs(UnmanagedType.U1)]
         public bool IsSliding;
         public int MainClipId;
         public int SecondaryClipId;
@@ -126,8 +128,7 @@ namespace ECS_Sound.Components
         public LocalToWorld EntityToWorld;
 
         public static CollisionInteraction Null => default;
-        
-        public bool Equals(CollisionInteraction other)
+        public readonly bool Equals(CollisionInteraction other)
         {
             return CollisionEntity == other.CollisionEntity
                    && ConfigurationId == other.ConfigurationId
