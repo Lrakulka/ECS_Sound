@@ -30,6 +30,7 @@ namespace ECS_Sound.Systems
             lookupActiveSoundSource = state.GetComponentLookup<ActiveSoundSourceComponent>();
             lookupCollisionSoundInteractions = state.GetComponentLookup<CollisionSoundInteractionsComponent>();
             
+            state.RequireForUpdate<PhysicsWorldSingleton>();
             state.RequireForUpdate<RayColliderInfoComponent>();
         }
 

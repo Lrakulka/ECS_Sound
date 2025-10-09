@@ -22,7 +22,7 @@ namespace ECS_Sound.Components.Authoring
 
             Gizmos.DrawLine(start, end);
             Gizmos.color = Color.green;
-            Gizmos.DrawCube(end, new Vector3(0.01f, 0.001f, 0.01f));
+            Gizmos.DrawCube(end, new Vector3(0.1f, 0.001f, 0.1f));
         }
     }
 
