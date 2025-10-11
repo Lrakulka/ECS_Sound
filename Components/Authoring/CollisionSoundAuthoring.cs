@@ -22,9 +22,9 @@ namespace ECS_Sound.Components.Authoring
                 AddComponent<ActiveSoundSourceComponent>(entity);
                 AddComponent<CollisionSoundInteractionsComponent>(entity);
             }
-            
-            if (authoring.configuration == null)
-                Debug.LogWarning($"{authoring} has incorrect collision sound configuration");
+
+            if (!authoring.configuration|| !authoring.configuration.touchClip || !authoring.configuration.slideClip)
+                Debug.LogError($"{authoring.gameObject} has incorrect collision sound configuration");
             AddComponent(entity, new CollisionSoundComponent
                 (
                     CollisionSoundConfigurationHub.GetAudioClipId(authoring.configuration.touchClip),

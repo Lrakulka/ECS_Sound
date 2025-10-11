@@ -4,18 +4,18 @@ using Unity.Physics;
 
 namespace ECS_Sound.Components
 {
-    public struct RayColliderInfoComponent : IComponentData
+    public struct RaySoundColliderInfoComponent : IComponentData
     {
         public readonly Entity Owner;
         public readonly float MinSoundVelocity;
-        public readonly float3 RayLength;
+        public readonly float3 RayPath;
         public readonly CollisionFilter Filter;
 
-        public RayColliderInfoComponent(Entity owner, float minSoundVelocity, float rayLength, CollisionFilter filter)
+        public RaySoundColliderInfoComponent(Entity owner, float minSoundVelocity, float3 rayPath, CollisionFilter filter)
         {
             Filter = filter;
             MinSoundVelocity = minSoundVelocity;
-            RayLength = math.down() * rayLength;
+            RayPath = rayPath;
             Owner = owner;
         }
     }

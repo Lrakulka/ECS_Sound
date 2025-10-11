@@ -31,7 +31,7 @@ namespace ECS_Sound.Systems
             lookupCollisionSoundInteractions = state.GetComponentLookup<CollisionSoundInteractionsComponent>();
             
             state.RequireForUpdate<PhysicsWorldSingleton>();
-            state.RequireForUpdate<RayColliderInfoComponent>();
+            state.RequireForUpdate<RaySoundColliderInfoComponent>();
         }
 
         [BurstCompile]
@@ -74,25 +74,25 @@ namespace ECS_Sound.Systems
             
             [BurstCompile]
             public void Execute(Entity consumerEntity, 
-                in RayColliderInfoComponent rayColliderInfo, in LocalToWorld consumerLocalToWorld)
+                in RaySoundColliderInfoComponent raySoundColliderInfo, in LocalToWorld consumerLocalToWorld)
             {
                 var rayCastFrom = consumerLocalToWorld.Position;
-                var rayCastTo = consumerLocalToWorld.Position - rayColliderInfo.RayLength;
+                var rayCastTo = consumerLocalToWorld.Position - raySoundColliderInfo.RayPath;
 
-                if (!CommonUtils.RayCast(rayCastFrom, rayCastTo, rayColliderInfo.Filter, ref PhysicsWorld.CollisionWorld, out var hit)) return;
+                if (!CommonUtils.RayCast(rayCastFrom, rayCastTo, raySoundColliderInfo.Filter, ref PhysicsWorld.CollisionWorld, out var hit)) return;
                     
                 var collidedEntity = hit.Entity;
                 var contactPoint = hit.Position;
                 var isUsingSecondaryClip = CollisionSoundFromEntity.HasComponent(collidedEntity);
                 var providerEntity = isUsingSecondaryClip ? collidedEntity : consumerEntity;
                     
-                SetInteraction(consumerEntity, providerEntity, collidedEntity, rayColliderInfo, consumerLocalToWorld,
+                SetInteraction(consumerEntity, providerEntity, collidedEntity, raySoundColliderInfo, consumerLocalToWorld,
                     contactPoint, isUsingSecondaryClip);
             }
             
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private void SetInteraction(in Entity consumerEntity, in Entity providerEntity, in Entity collidedEntity, 
-                in RayColliderInfoComponent rayColliderInfo, in LocalToWorld consumerLocalToWorld, 
+                in RaySoundColliderInfoComponent raySoundColliderInfo, in LocalToWorld consumerLocalToWorld, 
                 in float3 contactPoint, bool isUsingSecondaryClip = false)
             {
                 var consumerInteractions = CollisionSoundInteractionsFromEntity[consumerEntity];
@@ -100,14 +100,14 @@ namespace ECS_Sound.Systems
                 var interaction = consumerInteractions[interactionId];
 
                 float impulse;
-                if (PhysicsVelocityFromEntity.HasComponent(rayColliderInfo.Owner))
+                if (PhysicsVelocityFromEntity.HasComponent(raySoundColliderInfo.Owner))
                 {
-                    var physicsVelocity = PhysicsVelocityFromEntity[rayColliderInfo.Owner];
-                    impulse = GetImpulse(physicsVelocity, rayColliderInfo);
+                    var physicsVelocity = PhysicsVelocityFromEntity[raySoundColliderInfo.Owner];
+                    impulse = GetImpulse(physicsVelocity, raySoundColliderInfo);
                 }
                 else
                 {
-                    impulse = MAX_SUM_LINEAR_VELOCITY_THRESHOLD * rayColliderInfo.MinSoundVelocity;
+                    impulse = MAX_SUM_LINEAR_VELOCITY_THRESHOLD * raySoundColliderInfo.MinSoundVelocity;
                 }
                 
                 if (CollisionSoundSystemUtils.IsTouchInteraction(interaction, ElapsedTime))
@@ -134,11 +134,11 @@ namespace ECS_Sound.Systems
             }
 
             [BurstCompile]
-            private static float GetImpulse(in PhysicsVelocity physicsVelocity, in RayColliderInfoComponent rayColliderInfo)
+            private static float GetImpulse(in PhysicsVelocity physicsVelocity, in RaySoundColliderInfoComponent raySoundColliderInfo)
             {
                 var impulse = math.max(
                     CollisionSoundSystemUtils.GetVelocityImpulse(physicsVelocity),
-                    MAX_SUM_LINEAR_VELOCITY_THRESHOLD * rayColliderInfo.MinSoundVelocity);
+                    MAX_SUM_LINEAR_VELOCITY_THRESHOLD * raySoundColliderInfo.MinSoundVelocity);
                 return impulse;
             }
         }

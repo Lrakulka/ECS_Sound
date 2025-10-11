@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ECS_Sound.Components.Authoring
 {
-    public class RayColliderAuthoring : MonoBehaviour
+    public class RaySoundColliderAuthoring : MonoBehaviour
     {
         public GameObject owner;
         [Range(0f, 1f)]
@@ -15,28 +15,30 @@ namespace ECS_Sound.Components.Authoring
 
         private void OnDrawGizmos()
         {
-            Gizmos.color = Color.blue;
+            Gizmos.color = Color.red;
 
             var start = transform.position;
-            var end = start + Vector3.down * rayLength;
+            var end = start - gameObject.transform.up * rayLength;
 
             Gizmos.DrawLine(start, end);
+            var rotationMatrix = Matrix4x4.TRS(end, transform.rotation, new Vector3(0.1f, 0.01f, 0.1f));
+            Gizmos.matrix = rotationMatrix;	
             Gizmos.color = Color.green;
-            Gizmos.DrawCube(end, new Vector3(0.1f, 0.001f, 0.1f));
+            Gizmos.DrawCube(Vector3.zero, Vector3.one);
         }
     }
 
 #if UNITY_EDITOR
-    public class RayColliderBaker : Baker<RayColliderAuthoring>
+    public class RayColliderBaker : Baker<RaySoundColliderAuthoring>
     {
-        public override void Bake(RayColliderAuthoring authoring)
+        public override void Bake(RaySoundColliderAuthoring authoring)
         {
             var entity = GetEntity(TransformUsageFlags.Renderable);
-            AddComponent(entity, new RayColliderInfoComponent
+            AddComponent(entity, new RaySoundColliderInfoComponent
             (
                 GetEntity(authoring.owner, TransformUsageFlags.Renderable),
                 authoring.minSoundVelocity,
-                authoring.rayLength,
+                authoring.transform.up * authoring.rayLength,
                 new CollisionFilter
                 {
                     BelongsTo = (uint) authoring.belongsTo.value,
