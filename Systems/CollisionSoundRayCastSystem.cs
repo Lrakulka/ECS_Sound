@@ -11,7 +11,6 @@ using Unity.Transforms;
 
 namespace ECS_Sound.Systems
 {
-    [UpdateInGroup(typeof(CollisionSoundSystemGroup))]
     [BurstCompile]
     public partial struct CollisionSoundRayCastSystem : ISystem
     {

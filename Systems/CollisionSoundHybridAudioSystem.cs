@@ -11,7 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace ECS_Sound.Systems
 {
-    [UpdateInGroup(typeof(CollisionSoundSystemGroup))]
     public partial class CollisionSoundHybridAudioSystem : SystemBase
     {
         private EntityQuery entityQuery;
