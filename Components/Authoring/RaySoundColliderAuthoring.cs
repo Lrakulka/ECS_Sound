@@ -1,4 +1,5 @@
-﻿using Unity.Entities;
+﻿using ECS_Common.Utils;
+using Unity.Entities;
 using Unity.Physics;
 using UnityEngine;
 
@@ -9,8 +10,6 @@ namespace ECS_Sound.Components.Authoring
         public GameObject owner;
         [Range(0f, 1f)]
         public float minSoundVelocity;
-        public LayerMask belongsTo;
-        public LayerMask collidesWith;
         public float rayLength = 0.02f;
 
         private void OnDrawGizmos()
@@ -41,8 +40,8 @@ namespace ECS_Sound.Components.Authoring
                 authoring.transform.up * authoring.rayLength,
                 new CollisionFilter
                 {
-                    BelongsTo = (uint) authoring.belongsTo.value,
-                    CollidesWith = (uint) authoring.collidesWith.value,
+                    BelongsTo = (uint) (1 << authoring.gameObject.layer),
+                    CollidesWith = (uint) CommonManagedUtils.GetCollisionMask(authoring.gameObject.layer),
                     GroupIndex = 0
                 }
             ));
