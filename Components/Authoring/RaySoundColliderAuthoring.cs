@@ -38,12 +38,7 @@ namespace ECS_Sound.Components.Authoring
                 GetEntity(authoring.owner, TransformUsageFlags.Renderable),
                 authoring.minSoundVelocity,
                 authoring.transform.up * authoring.rayLength,
-                new CollisionFilter
-                {
-                    BelongsTo = (uint) (1 << authoring.gameObject.layer),
-                    CollidesWith = (uint) CommonManagedUtils.GetCollisionMask(authoring.gameObject.layer),
-                    GroupIndex = 0
-                }
+                CommonManagedUtils.GetCollisionFilter(authoring.gameObject.layer)
             ));
         }
     }
