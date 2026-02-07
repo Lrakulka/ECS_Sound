@@ -39,14 +39,7 @@ namespace ECS_Sound.Components.Authoring
         // Add Sound Source configuration to CollisionSoundConfigurationHub
         private static void AddConfiguration(CollisionSoundConfiguration configuration)
         {
-            var collisionSoundConfigurations = Object.FindObjectsOfType<CollisionSoundConfigurationHub>();
-            if (collisionSoundConfigurations.Length != 1)
-            {
-                // Build throw warning because CollisionSoundConfigurationHub is not exist yet (Ignore)
-                Debug.LogWarning($"Incorrect number of singleton CollisionSoundConfigurationHub {collisionSoundConfigurations.Length}");
-                return;
-            }
-            var configurations = collisionSoundConfigurations[0].configurationList;
+            var configurations = CollisionSoundConfigurationHub.GetInstance().configurationList;
             if (!configurations.Contains(configuration))
             {
                 configurations.Add(configuration);

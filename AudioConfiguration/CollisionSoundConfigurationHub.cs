@@ -14,17 +14,32 @@ namespace ECS_Sound.AudioConfiguration
         public Dictionary<int, CollisionSoundConfiguration> configurations = new();
         public Dictionary<int, AudioClip> audioClips = new();
         
-        private bool isSingleton;
         private static CollisionSoundConfigurationHub instance;
+
+        public static CollisionSoundConfigurationHub GetInstance()
+        {
+            if (instance != null) return instance;
+            
+            var collisionSoundConfigurations = FindObjectsOfType<CollisionSoundConfigurationHub>();
+            if (collisionSoundConfigurations.Length != 1)
+            {
+                // Build throw warning because CollisionSoundConfigurationHub is not exist yet (Ignore)
+                Debug.LogError($"Incorrect number of singleton CollisionSoundConfigurationHub {collisionSoundConfigurations.Length}");
+                return null;
+            }
+
+            instance = collisionSoundConfigurations[0];
+
+            return instance;
+        }
         
         protected void Awake() {
-            if (instance != null)
+            if (instance != null && instance != this)
             {
                 Debug.LogWarning("Creation more than one CollisionSoundConfigurationHub instances, instance - auto destroyed");
                 Destroy(this);
             }
             instance = this;
-            isSingleton = true;
 
             foreach(var configuration in configurationList)
             {
@@ -57,8 +72,7 @@ namespace ECS_Sound.AudioConfiguration
 
         protected void OnDestroy()
         {
-            if (isSingleton)
-                instance = null;
+            instance = null;
         }
         
         public CollisionSoundConfiguration GetConfiguration(int configurationId)
