@@ -11,6 +11,8 @@ namespace ECS_Sound.Systems
     // We are updating before `PhysicsSimulationGroup` - this means that we will get the events of the previous frame
     /*[UpdateBefore(typeof(PhysicsSimulationGroup))]
     [UpdateInGroup(typeof(PhysicsSystemGroup))]*/
+    [UpdateInGroup(typeof(SimulationSystemGroup), OrderLast = true)]
+    [UpdateAfter(typeof(EndSimulationEntityCommandBufferSystem))]
     [BurstCompile]
     public partial struct CollisionSoundCollisionEventsSystem : ISystem
     {

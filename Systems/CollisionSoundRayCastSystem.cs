@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using ECS_Common.Utils;
+using ECS_Common.Valzflow.Scripts.ECS_Common.CustomSystemGroups;
 using ECS_Sound.Components;
 using ECS_Sound.Utils;
 using Unity.Burst;
@@ -11,6 +12,8 @@ using Unity.Transforms;
 
 namespace ECS_Sound.Systems
 {
+    [BeforeMonoBehaviourPreUpdateGroup]
+    [DisableAutoCreation] // Otherwise system will be also run in Simulation Group
     [BurstCompile]
     public partial struct CollisionSoundRayCastSystem : ISystem
     {
