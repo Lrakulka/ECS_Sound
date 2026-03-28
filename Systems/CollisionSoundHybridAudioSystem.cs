@@ -28,8 +28,9 @@ namespace ECS_Sound.Systems
         private NativeArray<float3> audioListenerPositions;
         private Transform[] audioListenerTransforms;
 
-        private const int AUDIO_SOURCES_LIST_SIZE = 64; // should be more or equal to CollectionHelper.CacheLineSize (64)
+        private const int AUDIO_SOURCES_LIST_SIZE = 32;
         private const double SOUND_PRIORITY_RADIUS_SQ = 100;
+        private const double SOUND_IGNORE_RADIUS_SQ = 900;
 
         public class AudioSourcesHub
         {
@@ -39,12 +40,15 @@ namespace ECS_Sound.Systems
             public AudioSourcesHub(int size)
             {
                 audioSourcePull = new AudioSource[size];
-                for (var i = 0; i < audioSourcePull.Length; i++)
+                var companionGameObject = new GameObject($"AudioSource for active CollisionSound 0");
+                audioSourcePull[0] = companionGameObject.AddComponent<AudioSource>();
+                companionGameObject.AddComponent<AutoDisablePlayGameObject>();
+                companionGameObject.SetActive(false);
+                for (var i = 1; i < audioSourcePull.Length; i++)
                 {
-                    var companionGameObject = new GameObject($"AudioSource for active CollisionSound {i}");
-                    var audioSource = companionGameObject.AddComponent<AudioSource>();
-                    companionGameObject.AddComponent<AutoDisablePlayGameObject>();
-                    audioSourcePull[i] = audioSource;
+                    var instance = Object.Instantiate(companionGameObject);
+                    instance.name = $"AudioSource for active CollisionSound {i}";
+                    audioSourcePull[i] = instance.GetComponent<AudioSource>();
                 }
             }
 
@@ -52,6 +56,21 @@ namespace ECS_Sound.Systems
             {
                 currentAudioSourceId++;
                 return audioSourcePull[currentAudioSourceId % audioSourcePull.Length];
+            }
+
+            public void Dispose()
+            {
+                foreach (var audioSource in audioSourcePull)
+                {
+#if UNITY_EDITOR
+                    if (audioSource != null)
+                        //Destroy may not be called from edit mode! Use DestroyImmediate instead
+                        UnityEngine.Object.DestroyImmediate(audioSource.gameObject);
+#else
+                    if (audioSource != null)
+                        UnityEngine.Object.Destroy(audioSource.gameObject);
+#endif
+                }
             }
         }
 
@@ -97,6 +116,7 @@ namespace ECS_Sound.Systems
             if (slidePriorityInteractionToPlaySoundList.IsCreated) slidePriorityInteractionToPlaySoundList.Dispose();
             if (touchInteractionToPlaySoundList.IsCreated) touchInteractionToPlaySoundList.Dispose();
             if (slideInteractionToPlaySoundList.IsCreated) slideInteractionToPlaySoundList.Dispose();
+            audioSourcesHub.Dispose();
         }
 
         protected override void OnUpdate()
@@ -155,6 +175,7 @@ namespace ECS_Sound.Systems
                         {
                             distanceSq = math.min(distanceSq, math.distancesq(listenerPosition, localToWorld.Position));
                         }
+                        if (distanceSq > SOUND_IGNORE_RADIUS_SQ) continue;
                         
                         var interaction = interactions[interactionId];
                         if (distanceSq < SOUND_PRIORITY_RADIUS_SQ)

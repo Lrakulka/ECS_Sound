@@ -9,6 +9,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Physics;
 using Unity.Transforms;
+using UnityEngine;
 
 namespace ECS_Sound.Systems
 {
@@ -39,6 +40,9 @@ namespace ECS_Sound.Systems
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
+#if UNITY_EDITOR
+            if (!Application.isPlaying) return;
+#endif
             var worldSingleton = SystemAPI.GetSingleton<PhysicsWorldSingleton>(); 
             var elapsedTime = SystemAPI.Time.ElapsedTime;
             
