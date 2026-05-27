@@ -20,6 +20,7 @@ namespace ECS_Sound.Systems
     }
 
     [UpdateInGroup(typeof(PresentationSystemGroup))]
+    [WorldSystemFilter(WorldSystemFilterFlags.Default | WorldSystemFilterFlags.ClientSimulation)]
     public partial class CollisionSoundHybridAudioSystem : SystemBase
     {
         private EntityQuery entityQuery;
