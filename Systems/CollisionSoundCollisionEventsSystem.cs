@@ -8,28 +8,25 @@ using Unity.Transforms;
 
 namespace ECS_Sound.Systems
 {
-    // We are updating before `PhysicsSimulationGroup` - this means that we will get the events of the previous frame
-    /*[UpdateBefore(typeof(PhysicsSimulationGroup))]
-    [UpdateInGroup(typeof(PhysicsSystemGroup))]*/
     [UpdateInGroup(typeof(SimulationSystemGroup), OrderLast = true)]
     [UpdateAfter(typeof(EndSimulationEntityCommandBufferSystem))]
     [BurstCompile]
     public partial struct CollisionSoundCollisionEventsSystem : ISystem
     {
-        private ComponentLookup<LocalToWorld> lookupLocalToWorld;
-        private ComponentLookup<PhysicsVelocity> lookupPhysicsVelocity;
-        private ComponentLookup<CollisionSoundComponent> lookupCollisionSound;
-        private ComponentLookup<ActiveSoundSourceComponent> lookupActiveSoundSource;
-        private ComponentLookup<CollisionSoundInteractionsComponent> lookupCollisionSoundInteractions;
+        private ComponentLookup<LocalToWorld> _lookupLocalToWorld;
+        private ComponentLookup<PhysicsVelocity> _lookupPhysicsVelocity;
+        private ComponentLookup<CollisionSoundComponent> _lookupCollisionSound;
+        private ComponentLookup<ActiveSoundSourceComponent> _lookupActiveSoundSource;
+        private ComponentLookup<CollisionSoundInteractionsComponent> _lookupCollisionSoundInteractions;
         
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            lookupLocalToWorld = state.GetComponentLookup<LocalToWorld>(true);
-            lookupCollisionSound = state.GetComponentLookup<CollisionSoundComponent>(true);
-            lookupPhysicsVelocity = state.GetComponentLookup<PhysicsVelocity>(true);
-            lookupActiveSoundSource = state.GetComponentLookup<ActiveSoundSourceComponent>();
-            lookupCollisionSoundInteractions = state.GetComponentLookup<CollisionSoundInteractionsComponent>();
+            _lookupLocalToWorld = state.GetComponentLookup<LocalToWorld>(true);
+            _lookupCollisionSound = state.GetComponentLookup<CollisionSoundComponent>(true);
+            _lookupPhysicsVelocity = state.GetComponentLookup<PhysicsVelocity>(true);
+            _lookupActiveSoundSource = state.GetComponentLookup<ActiveSoundSourceComponent>();
+            _lookupCollisionSoundInteractions = state.GetComponentLookup<CollisionSoundInteractionsComponent>();
             
             state.RequireForUpdate<SimulationSingleton>();
             state.RequireForUpdate<PhysicsWorldSingleton>();
@@ -41,21 +38,21 @@ namespace ECS_Sound.Systems
             var physicsWorldSingleton = SystemAPI.GetSingleton<PhysicsWorldSingleton>();
             var elapsedTime = SystemAPI.Time.ElapsedTime;
             
-            lookupLocalToWorld.Update(ref state);
-            lookupCollisionSound.Update(ref state);
-            lookupPhysicsVelocity.Update(ref state);
-            lookupActiveSoundSource.Update(ref state);
-            lookupCollisionSoundInteractions.Update(ref state);
+            _lookupLocalToWorld.Update(ref state);
+            _lookupCollisionSound.Update(ref state);
+            _lookupPhysicsVelocity.Update(ref state);
+            _lookupActiveSoundSource.Update(ref state);
+            _lookupCollisionSoundInteractions.Update(ref state);
             
             state.Dependency = new CollisionSoundCollisionEventsJob
             {
                 ElapsedTime = elapsedTime,
                 PhysicsWorld = physicsWorldSingleton.PhysicsWorld,
-                LocalToWorldFromEntity = lookupLocalToWorld,
-                CollisionSoundFromEntity = lookupCollisionSound,
-                PhysicsVelocityFromEntity = lookupPhysicsVelocity,
-                ActiveSoundSourceFromEntity = lookupActiveSoundSource,
-                CollisionSoundInteractionsFromEntity = lookupCollisionSoundInteractions,
+                LocalToWorldFromEntity = _lookupLocalToWorld,
+                CollisionSoundFromEntity = _lookupCollisionSound,
+                PhysicsVelocityFromEntity = _lookupPhysicsVelocity,
+                ActiveSoundSourceFromEntity = _lookupActiveSoundSource,
+                CollisionSoundInteractionsFromEntity = _lookupCollisionSoundInteractions,
             }.Schedule(SystemAPI.GetSingleton<SimulationSingleton>(), state.Dependency);
         }
     

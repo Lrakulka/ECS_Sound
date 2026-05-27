@@ -7,7 +7,7 @@ namespace ECS_Sound.Components
 {
     public struct CollisionSoundInteractionsComponent : IComponentData
     {
-        // AudioSource PlayOneShot has limitation in 10 clips. It can be extended.
+        // AudioSource bitmask in ActiveSoundSourceComponent uses 32 bits; cap interactions to fit.
         internal int Length => 10;
 
         public CollisionInteraction Interaction0;
@@ -26,7 +26,7 @@ namespace ECS_Sound.Components
             get => GetInteraction(interactionId);
             set => SetInteraction(interactionId, value);
         }
-        
+
         private CollisionInteraction GetInteraction(int interactionId)
         {
             switch (interactionId)
@@ -117,9 +117,16 @@ namespace ECS_Sound.Components
     {
         [MarshalAs(UnmanagedType.U1)]
         public bool IsSliding;
-        public int MainClipId;
-        public int SecondaryClipId;
-        public int ConfigurationId; // Contains Id with configurations for clip play
+
+        /// <summary>Configuration of the *consumer* (this entity). Drives the source's pitch,
+        /// spatial blend, rolloff, etc. The clip is picked from this configuration's touch/slide arrays.</summary>
+        public int MainConfigurationId;
+
+        /// <summary>Configuration of the *provider* (the other entity in the collision), or 0 if the
+        /// other entity has no CollisionSoundComponent. When non-zero, a clip from this configuration
+        /// is layered in via PlayOneShot with the secondary configuration's volume.</summary>
+        public int SecondaryConfigurationId;
+
         public float VolumeScale;
         public double UpdatedTime;
         public double PlayClipEndTime;
@@ -128,12 +135,12 @@ namespace ECS_Sound.Components
         public LocalToWorld EntityToWorld;
 
         public static CollisionInteraction Null => default;
+
         public readonly bool Equals(CollisionInteraction other)
         {
             return CollisionEntity == other.CollisionEntity
-                   && ConfigurationId == other.ConfigurationId
-                   && MainClipId == other.MainClipId
-                   && SecondaryClipId == other.SecondaryClipId;
+                   && MainConfigurationId == other.MainConfigurationId
+                   && SecondaryConfigurationId == other.SecondaryConfigurationId;
         }
     }
 }

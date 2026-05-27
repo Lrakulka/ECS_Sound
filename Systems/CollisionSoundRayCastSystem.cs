@@ -18,20 +18,20 @@ namespace ECS_Sound.Systems
     [BurstCompile]
     public partial struct CollisionSoundRayCastSystem : ISystem
     {
-        private const float MAX_SUM_LINEAR_VELOCITY_THRESHOLD = 25f;
+        private const float MaxSumLinearVelocityThreshold = 25f;
 
-        private ComponentLookup<PhysicsVelocity> lookupPhysicsVelocity;
-        private ComponentLookup<CollisionSoundComponent> lookupCollisionSound;
-        private ComponentLookup<ActiveSoundSourceComponent> lookupActiveSoundSource;
-        private ComponentLookup<CollisionSoundInteractionsComponent> lookupCollisionSoundInteractions;
+        private ComponentLookup<PhysicsVelocity> _lookupPhysicsVelocity;
+        private ComponentLookup<CollisionSoundComponent> _lookupCollisionSound;
+        private ComponentLookup<ActiveSoundSourceComponent> _lookupActiveSoundSource;
+        private ComponentLookup<CollisionSoundInteractionsComponent> _lookupCollisionSoundInteractions;
         
         [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
-            lookupPhysicsVelocity = state.GetComponentLookup<PhysicsVelocity>(true);
-            lookupCollisionSound = state.GetComponentLookup<CollisionSoundComponent>(true);
-            lookupActiveSoundSource = state.GetComponentLookup<ActiveSoundSourceComponent>();
-            lookupCollisionSoundInteractions = state.GetComponentLookup<CollisionSoundInteractionsComponent>();
+            _lookupPhysicsVelocity = state.GetComponentLookup<PhysicsVelocity>(true);
+            _lookupCollisionSound = state.GetComponentLookup<CollisionSoundComponent>(true);
+            _lookupActiveSoundSource = state.GetComponentLookup<ActiveSoundSourceComponent>();
+            _lookupCollisionSoundInteractions = state.GetComponentLookup<CollisionSoundInteractionsComponent>();
             
             state.RequireForUpdate<PhysicsWorldSingleton>();
             state.RequireForUpdate<RaySoundColliderInfoComponent>();
@@ -46,19 +46,19 @@ namespace ECS_Sound.Systems
             var worldSingleton = SystemAPI.GetSingleton<PhysicsWorldSingleton>(); 
             var elapsedTime = SystemAPI.Time.ElapsedTime;
             
-            lookupCollisionSound.Update(ref state);
-            lookupPhysicsVelocity.Update(ref state);
-            lookupActiveSoundSource.Update(ref state);
-            lookupCollisionSoundInteractions.Update(ref state);
+            _lookupCollisionSound.Update(ref state);
+            _lookupPhysicsVelocity.Update(ref state);
+            _lookupActiveSoundSource.Update(ref state);
+            _lookupCollisionSoundInteractions.Update(ref state);
 
             new RayColliderJob
             {
                 ElapsedTime = elapsedTime,
                 PhysicsWorld = worldSingleton.PhysicsWorld,
-                CollisionSoundFromEntity = lookupCollisionSound,
-                PhysicsVelocityFromEntity = lookupPhysicsVelocity,
-                ActiveSoundSourceFromEntity = lookupActiveSoundSource,
-                CollisionSoundInteractionsFromEntity = lookupCollisionSoundInteractions,
+                CollisionSoundFromEntity = _lookupCollisionSound,
+                PhysicsVelocityFromEntity = _lookupPhysicsVelocity,
+                ActiveSoundSourceFromEntity = _lookupActiveSoundSource,
+                CollisionSoundInteractionsFromEntity = _lookupCollisionSoundInteractions,
             }.ScheduleParallel();
         }
         
@@ -113,7 +113,7 @@ namespace ECS_Sound.Systems
                 }
                 else
                 {
-                    impulse = MAX_SUM_LINEAR_VELOCITY_THRESHOLD * raySoundColliderInfo.MinSoundVelocity;
+                    impulse = MaxSumLinearVelocityThreshold * raySoundColliderInfo.MinSoundVelocity;
                 }
                 
                 if (CollisionSoundSystemUtils.IsTouchInteraction(interaction, ElapsedTime))
@@ -144,7 +144,7 @@ namespace ECS_Sound.Systems
             {
                 var impulse = math.max(
                     CollisionSoundSystemUtils.GetVelocityImpulse(physicsVelocity),
-                    MAX_SUM_LINEAR_VELOCITY_THRESHOLD * raySoundColliderInfo.MinSoundVelocity);
+                    MaxSumLinearVelocityThreshold * raySoundColliderInfo.MinSoundVelocity);
                 return impulse;
             }
         }

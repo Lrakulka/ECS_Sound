@@ -7,7 +7,6 @@ using Unity.Transforms;
 
 namespace ECS_Sound.Utils
 {
-    
     [BurstCompile]
     public static class CollisionSoundSystemUtils
     {
@@ -36,7 +35,13 @@ namespace ECS_Sound.Utils
             return interactionId != -1 ? interactionId : interactions.Length - 1;
         }
 
-        // TODO: simplify 
+        /// <summary>
+        /// Populate an interaction with the configurations of consumer + provider. The audio system
+        /// will pick clips at play time from the respective configurations' arrays.
+        ///
+        /// MainConfigurationId is always the consumer's. SecondaryConfigurationId is the provider's
+        /// when <paramref name="isUsingSecondaryClip"/> is true, otherwise 0 (no layering).
+        /// </summary>
         [BurstCompile]
         internal static void SetActiveInteraction(ref CollisionInteraction interaction, int interactionId,
             ref ComponentLookup<ActiveSoundSourceComponent> activeSoundSourceFromEntity,
@@ -52,13 +57,15 @@ namespace ECS_Sound.Utils
             interaction.CollisionEntity = collidedEntity;
             interaction.VolumeScale = GetInteractionVolumeScale(impulse);
             interaction.AverageContactPoint = averageContactPoint;
-            interaction.ConfigurationId = providerSound.ConfigurationId;
             interaction.IsSliding = isSlidingClip;
-            interaction.MainClipId = isSlidingClip ? consumerSound.SlideClipId : consumerSound.TouchClipId;
-            if (isUsingSecondaryClip)
-            {
-                interaction.SecondaryClipId = isSlidingClip ? providerSound.SlideClipId : providerSound.TouchClipId;
-            }
+
+            // Consumer's config drives the AudioSource (pitch, spatial, rolloff). Consumer's clip
+            // (picked at play time) plays as the main clip → consumer-material sounds like itself.
+            interaction.MainConfigurationId = consumerSound.ConfigurationId;
+
+            // Provider's config controls the layered clip's volume (via PlayOneShot). The layered
+            // clip is picked at play time from the provider's array → other-material sounds like itself.
+            interaction.SecondaryConfigurationId = isUsingSecondaryClip ? providerSound.ConfigurationId : 0;
 
             activeSoundSource.SetPlaySoundActive(interactionId, true);
             activeSoundSourceFromEntity[consumerEntity] = activeSoundSource;
@@ -70,8 +77,7 @@ namespace ECS_Sound.Utils
             return math.csum(math.abs(physicsVelocity.Linear));
         }
 
-        // TODO: Fix method logic, this approach is not reliable, if update cycle was long it will trigger it
-        // if TOUCH_THRESHOLD_TIME to large then some hits will be missed
+        // TODO: existing limitation — long update cycles can over-trigger; tiny threshold can miss hits.
         [BurstCompile]
         internal static bool IsTouchInteraction(in CollisionInteraction interaction, double time)
         {
@@ -95,6 +101,7 @@ namespace ECS_Sound.Utils
         [BurstCompile]
         private static float GetInteractionVolumeScale(float impact)
         {
+            // Linear scale; the audio system optionally applies sqrt() based on the asset toggle.
             return math.min(impact / MAX_SUM_LINEAR_VELOCITY_THRESHOLD, 1f);
         }
     }

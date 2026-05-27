@@ -1,4 +1,3 @@
-using ECS_Common.Utils;
 using ECS_Sound.AudioConfiguration;
 using ECS_Sound.Components;
 using ECS_Sound.Utils;
@@ -7,260 +6,201 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace ECS_Sound.Systems
 {
+    /// <summary>Queued playback entry, sorted descending by Score before draining.</summary>
+    public struct ScoredInteraction
+    {
+        public CollisionInteraction Interaction;
+        public Entity ConsumerEntity;
+        public int InteractionId;
+        public float Score;
+        public double PlayEndTime;
+    }
+
     [UpdateInGroup(typeof(PresentationSystemGroup))]
     public partial class CollisionSoundHybridAudioSystem : SystemBase
     {
         private EntityQuery entityQuery;
-        private CollisionSoundConfigurationHub configurationsHub;
-        
-        private NativeParallelHashMap<int, float> audioClipLengthMap;
-        private NativeParallelHashMap<int, float> audioSourcePitchMap;
-
         private AudioSourcesHub audioSourcesHub;
-        private NativeList<CollisionInteraction> touchPriorityInteractionToPlaySoundList;
-        private NativeList<CollisionInteraction> slidePriorityInteractionToPlaySoundList;
-        private NativeList<CollisionInteraction> touchInteractionToPlaySoundList;
-        private NativeList<CollisionInteraction> slideInteractionToPlaySoundList;
-        private NativeArray<float3> audioListenerPositions;
-        private Transform[] audioListenerTransforms;
+        private CollisionSoundListenerRegistry listenerRegistry;
+        private CollisionSoundConfigurationAsset assetRef;
 
-        private const int AUDIO_SOURCES_LIST_SIZE = 32;
-        private const double SOUND_PRIORITY_RADIUS_SQ = 100;
-        private const double SOUND_IGNORE_RADIUS_SQ = 900;
+        private ComponentLookup<CollisionSoundInteractionsComponent> interactionsLookup;
+        private NativeList<ScoredInteraction> scoredInteractions;
 
-        public class AudioSourcesHub
+        protected override void OnCreate()
         {
-            private uint currentAudioSourceId;
-            private AudioSource[] audioSourcePull;
-
-            public AudioSourcesHub(int size)
-            {
-                audioSourcePull = new AudioSource[size];
-                var companionGameObject = new GameObject($"AudioSource for active CollisionSound 0");
-                audioSourcePull[0] = companionGameObject.AddComponent<AudioSource>();
-                companionGameObject.AddComponent<AutoDisablePlayGameObject>();
-                companionGameObject.SetActive(false);
-                for (var i = 1; i < audioSourcePull.Length; i++)
-                {
-                    var instance = Object.Instantiate(companionGameObject);
-                    instance.name = $"AudioSource for active CollisionSound {i}";
-                    audioSourcePull[i] = instance.GetComponent<AudioSource>();
-                }
-            }
-
-            public AudioSource GetAudioSource()
-            {
-                currentAudioSourceId++;
-                return audioSourcePull[currentAudioSourceId % audioSourcePull.Length];
-            }
-
-            public void Dispose()
-            {
-                foreach (var audioSource in audioSourcePull)
-                {
-#if UNITY_EDITOR
-                    if (audioSource != null)
-                        //Destroy may not be called from edit mode! Use DestroyImmediate instead
-                        UnityEngine.Object.DestroyImmediate(audioSource.gameObject);
-#else
-                    if (audioSource != null)
-                        UnityEngine.Object.Destroy(audioSource.gameObject);
-#endif
-                }
-            }
+            RequireForUpdate<CollisionSoundBlobReference>();
+            interactionsLookup = GetComponentLookup<CollisionSoundInteractionsComponent>(isReadOnly: true);
         }
 
-        private void Initialize()
+        private void LazyInitialize(ref CollisionSoundBlobData blob)
         {
-            audioClipLengthMap = new NativeParallelHashMap<int, float>(configurationsHub.audioClips.Count, Allocator.Persistent);
-            audioSourcePitchMap = new NativeParallelHashMap<int, float>(configurationsHub.configurations.Count, Allocator.Persistent);
-            
-            foreach (var audioClipKeyValue in configurationsHub.audioClips)
-            {
-                audioClipLengthMap.Add(audioClipKeyValue.Key, audioClipKeyValue.Value.length);
-            }
-            foreach (var configurationKeyValue in configurationsHub.configurations)
-            {
-                audioSourcePitchMap.Add(configurationKeyValue.Key, math.abs(configurationKeyValue.Value.pitch));
-            }
+            assetRef = CollisionSoundConfigurationHub.LoadAsset();
+            audioSourcesHub = new AudioSourcesHub(blob.AudioSourcePoolSize);
+            scoredInteractions = new NativeList<ScoredInteraction>(blob.AudioSourcePoolSize * 2, Allocator.Persistent);
 
-            audioSourcesHub = new AudioSourcesHub(AUDIO_SOURCES_LIST_SIZE);
-            touchPriorityInteractionToPlaySoundList =
-                new NativeList<CollisionInteraction>(AUDIO_SOURCES_LIST_SIZE, Allocator.Persistent);
-            slidePriorityInteractionToPlaySoundList =
-                new NativeList<CollisionInteraction>(AUDIO_SOURCES_LIST_SIZE, Allocator.Persistent);
-            touchInteractionToPlaySoundList =
-                new NativeList<CollisionInteraction>(AUDIO_SOURCES_LIST_SIZE, Allocator.Persistent);
-            slideInteractionToPlaySoundList =
-                new NativeList<CollisionInteraction>(AUDIO_SOURCES_LIST_SIZE, Allocator.Persistent);
-
-            var audioListeners = Object.FindObjectsOfType<AudioListener>(false);
-            audioListenerTransforms = new Transform[audioListeners.Length];
-            audioListenerPositions = new NativeArray<float3>(audioListeners.Length, Allocator.Persistent);
-            for (var i = 0; i < audioListenerTransforms.Length; i++)
-            {
-                audioListenerTransforms[i] = audioListeners[i].transform;
-            }
+            var rescan = assetRef != null ? assetRef.ListenerRescanInterval : 1.0f;
+            listenerRegistry = new CollisionSoundListenerRegistry(rescan, Allocator.Persistent);
         }
 
         protected override void OnDestroy()
         {
-            if (audioClipLengthMap.IsCreated) audioClipLengthMap.Dispose();
-            if (audioSourcePitchMap.IsCreated) audioSourcePitchMap.Dispose();
-            if (audioListenerPositions.IsCreated) audioListenerPositions.Dispose();
-            if (touchPriorityInteractionToPlaySoundList.IsCreated) touchPriorityInteractionToPlaySoundList.Dispose();
-            if (slidePriorityInteractionToPlaySoundList.IsCreated) slidePriorityInteractionToPlaySoundList.Dispose();
-            if (touchInteractionToPlaySoundList.IsCreated) touchInteractionToPlaySoundList.Dispose();
-            if (slideInteractionToPlaySoundList.IsCreated) slideInteractionToPlaySoundList.Dispose();
-            audioSourcesHub.Dispose();
+            if (scoredInteractions.IsCreated) scoredInteractions.Dispose();
+            listenerRegistry?.Dispose();
+            audioSourcesHub?.Dispose();
         }
 
         protected override void OnUpdate()
         {
-            if (configurationsHub == null)
+            var blobRef = SystemAPI.GetSingleton<CollisionSoundBlobReference>();
+            ref var blob = ref blobRef.Blob.Value;
+
+            if (audioSourcesHub == null) LazyInitialize(ref blob);
+
+            var now = SystemAPI.Time.ElapsedTime;
+            audioSourcesHub.Tick(now);
+
+            // Stop slide sources whose interaction has gone stale (sliding ended).
+            EntityManager.CompleteDependencyBeforeRO<CollisionSoundInteractionsComponent>();
+            interactionsLookup.Update(this);
+            audioSourcesHub.StopExpiredSlides(now,
+                staleThreshold: assetRef.SlideStaleTime,
+                graceTime: assetRef.SlideStopGraceTime,
+                interactionsLookup);
+
+            listenerRegistry.UpdatePositions(SystemAPI.Time.DeltaTime);
+
+            // Wait for last frame's collection job before reading scoredInteractions on main thread.
+            Dependency.Complete();
+
+            // Drain whatever was collected on the previous frame.
+            PlayQueuedSounds(now);
+            scoredInteractions.Clear();
+
+            // Capacity sizing for AddNoResize (ParallelWriter requirement).
+            var maxPossible = entityQuery.CalculateEntityCount() * 4;
+            if (scoredInteractions.Capacity < maxPossible)
             {
-                // Object CollisionSoundConfigurationHub is not found on Scene load by another Scene in OnCreate()
-                var configurationsHubGameObject = GameObject.Find("CollisionSoundConfigurationHub");
-                if (configurationsHubGameObject == null)
-                {
-#if UNITY_EDITOR
-                    // Throw a lot in profiler. Eat performance.
-                    Debug.LogWarning("CollisionSoundConfigurationHub not found, sound not initialized");
-#endif
-                    return;
-                }
-                configurationsHub = configurationsHubGameObject.GetComponent<CollisionSoundConfigurationHub>();
-                Initialize();
+                scoredInteractions.Capacity = math.max(maxPossible, blob.AudioSourcePoolSize * 4);
             }
 
-            PlayActualSound();
-            
-            touchPriorityInteractionToPlaySoundList.Clear();
-            slidePriorityInteractionToPlaySoundList.Clear();
-            touchInteractionToPlaySoundList.Clear();
-            slideInteractionToPlaySoundList.Clear();
-            
-            for (var i = 0; i < audioListenerTransforms.Length; i++)
-            {
-                audioListenerPositions[i] = audioListenerTransforms[i].position;
-            }
+            var listenerPositions = listenerRegistry.Positions.AsArray();
+            if (listenerPositions.Length == 0) return; // Nothing to score against.
 
-            var localAudioClipLengthMap = audioClipLengthMap;
-            var localAudioSourcePitchMap = audioSourcePitchMap;
-            var localAudioListenerPositions = audioListenerPositions;
-            var localTouchPriorityInteractionToPlaySoundList = touchPriorityInteractionToPlaySoundList;
-            var localSlidePriorityInteractionToPlaySoundList = slidePriorityInteractionToPlaySoundList;
-            var localTouchInteractionToPlaySoundList = touchInteractionToPlaySoundList;
-            var localSlideInteractionToPlaySoundList = slideInteractionToPlaySoundList;
-            
+            var writer = scoredInteractions.AsParallelWriter();
+            var priorityRadiusSq = blob.SoundPriorityRadiusSq;
+            var ignoreRadiusSq = blob.SoundIgnoreRadiusSq;
+            var blobRefLocal = blobRef;
+
             Entities
                 .WithStoreEntityQueryInField(ref entityQuery)
-                .WithReadOnly(localAudioClipLengthMap)
-                .WithReadOnly(localAudioSourcePitchMap)
-                .WithReadOnly(localAudioListenerPositions)
+                .WithReadOnly(listenerPositions)
                 .WithChangeFilter<ActiveSoundSourceComponent>()
                 .ForEach((Entity entity, ref ActiveSoundSourceComponent activeSoundSource,
                     ref CollisionSoundInteractionsComponent interactions, in LocalToWorld localToWorld) =>
                 {
+                    ref var b = ref blobRefLocal.Blob.Value;
+
                     for (var interactionId = 0; interactionId < interactions.Length; interactionId++)
                     {
                         if (!activeSoundSource.IsPlaySound(interactionId)) continue;
 
-                        var distanceSq = double.MinValue;
-                        foreach (var listenerPosition in localAudioListenerPositions)
+                        // Nearest-listener distance.
+                        var distanceSq = double.MaxValue;
+                        for (int li = 0; li < listenerPositions.Length; li++)
                         {
-                            distanceSq = math.min(distanceSq, math.distancesq(listenerPosition, localToWorld.Position));
+                            distanceSq = math.min(distanceSq,
+                                math.distancesq(listenerPositions[li], localToWorld.Position));
                         }
-                        if (distanceSq > SOUND_IGNORE_RADIUS_SQ) continue;
-                        
-                        var interaction = interactions[interactionId];
-                        if (distanceSq < SOUND_PRIORITY_RADIUS_SQ)
-                        {
-                            if (interaction.IsSliding)
-                                localSlidePriorityInteractionToPlaySoundList.Add(interaction);
-                            else
-                                localTouchPriorityInteractionToPlaySoundList.Add(interaction);
-                        }
-                        else
-                        {
-                            if (interaction.IsSliding)
-                                localSlideInteractionToPlaySoundList.Add(interaction);
-                            else
-                                localTouchInteractionToPlaySoundList.Add(interaction);
-                        }
-                        
-                        var maxClipDuration = HybridAudioUtils.GetAudioClipLength(
-                            localAudioClipLengthMap[interaction.MainClipId],
-                            localAudioSourcePitchMap[interaction.ConfigurationId]
-                        );
-                        if (interaction.SecondaryClipId != 0)
-                        {
-                            maxClipDuration = math.max(
-                                maxClipDuration,
-                                HybridAudioUtils.GetAudioClipLength(
-                                    localAudioClipLengthMap[interaction.SecondaryClipId],
-                                    localAudioSourcePitchMap[interaction.ConfigurationId]
-                                )
-                            );
-                        }
+                        if (distanceSq > ignoreRadiusSq) continue;
 
-                        interaction.PlayClipEndTime = interaction.UpdatedTime + maxClipDuration;
-                        interactions[interactionId] = interaction;
-                    } 
-                    
+                        var interaction = interactions[interactionId];
+
+                        // Look up the main configuration's per-kind pitch for end-time prediction.
+                        var configIdx = CollisionSoundBlobLookup.IndexOf(ref b.ConfigIds, interaction.MainConfigurationId);
+                        if (configIdx < 0)
+                        {
+                            Debug.LogWarning($"Can't find id of configuration in collision blob assets for MainConfigurationId ${interaction.MainConfigurationId}");
+                            continue;
+                        }
+                        var pitchAbs = interaction.IsSliding
+                            ? b.Configs[configIdx].SlidePitchAbs
+                            : b.Configs[configIdx].TouchPitchAbs;
+
+                        // Predicted end-time: we don't know the actual picked clip yet (main thread),
+                        // so we use a conservative 1-second placeholder scaled by pitch. The real
+                        // end-time is written back by PlayQueuedSounds after picking.
+                        const float clipLengthEstimateSeconds = 1.0f;
+                        var maxClipDuration = pitchAbs > 0 ? clipLengthEstimateSeconds / pitchAbs : clipLengthEstimateSeconds;
+                        var playEndTime = interaction.UpdatedTime + maxClipDuration;
+
+                        // Score: priority-radius dominates; within a band, touch beats slide;
+                        // within (band, kind), closer wins.
+                        var inPriority = distanceSq < priorityRadiusSq;
+                        var bandScore = inPriority ? 1000f : 0f;
+                        var kindScore = interaction.IsSliding ? 0f : 100f;
+                        var distScore = (float)(ignoreRadiusSq - distanceSq);
+                        var score = bandScore + kindScore + distScore * 0.01f;
+
+                        writer.AddNoResize(new ScoredInteraction
+                        {
+                            Interaction = interaction,
+                            ConsumerEntity = entity,
+                            InteractionId = interactionId,
+                            Score = score,
+                            PlayEndTime = playEndTime,
+                        });
+                    }
+
                     activeSoundSource.interactionsIds = 0;
                 })
                 .WithName("CollisionSoundHybridAudioCollectionJob")
                 .Schedule();
         }
 
-        private void PlayActualSound()
+        private void PlayQueuedSounds(double now)
         {
-#if UNITY_EDITOR
-            if (touchPriorityInteractionToPlaySoundList.Length > AUDIO_SOURCES_LIST_SIZE)
-                // Throw a lot in profiler. Eat performance.
-                Debug.LogWarning("Not enough space in AudioInteractionList, the last interactions will be dropped");
-#endif
-            void PlayInteraction(in CollisionInteraction interaction)
+            if (scoredInteractions.Length == 0 || assetRef == null) return;
+
+            scoredInteractions.AsArray().Sort(default(ScoreDescendingComparer));
+
+            for (int i = 0; i < scoredInteractions.Length; i++)
             {
-                var isAudioSource = HybridAudioUtils
-                    .PlayClipSound(ref audioSourcesHub, interaction.ConfigurationId, interaction.MainClipId,
-                        interaction.AverageContactPoint, interaction.VolumeScale, configurationsHub, out var audioSource);
-                if (interaction.SecondaryClipId != 0 && isAudioSource)
+                var s = scoredInteractions[i];
+                if (!audioSourcesHub.TryAcquire(
+                        s.Score, s.PlayEndTime,
+                        s.Interaction.IsSliding, s.ConsumerEntity, s.InteractionId,
+                        out var audioSource, out _))
                 {
-                    audioSource.PlayOneShot(configurationsHub.GetAudioClip(interaction.SecondaryClipId));
+                    // Pool full, score didn't outrank anything; remaining entries score even lower.
+                    break;
+                }
+
+                if (HybridAudioUtils.PlayClipSound(audioSource, s.Interaction, assetRef, now,
+                        out var actualEndTime))
+                {
+                    // Write the real end-time back to the entity so collection systems gate retriggers correctly.
+                    WriteBackPlayEndTime(s.ConsumerEntity, s.InteractionId, actualEndTime);
                 }
             }
-            
-            var audioSourceCount = 0;
-            for (var interactionId = 0; 
-                interactionId < touchPriorityInteractionToPlaySoundList.Length && audioSourceCount < AUDIO_SOURCES_LIST_SIZE; 
-                interactionId++, audioSourceCount++)
-            {
-                PlayInteraction(touchPriorityInteractionToPlaySoundList[interactionId]);
-            }
-            for (var interactionId = 0; 
-                interactionId < slidePriorityInteractionToPlaySoundList.Length && audioSourceCount < AUDIO_SOURCES_LIST_SIZE; 
-                interactionId++, audioSourceCount++)
-            {
-                PlayInteraction(slidePriorityInteractionToPlaySoundList[interactionId]);
-            }
-            for (var interactionId = 0; 
-                interactionId < touchInteractionToPlaySoundList.Length && audioSourceCount < AUDIO_SOURCES_LIST_SIZE; 
-                interactionId++, audioSourceCount++)
-            {
-                PlayInteraction(touchInteractionToPlaySoundList[interactionId]);
-            }
-            for (var interactionId = 0; 
-                interactionId < slideInteractionToPlaySoundList.Length && audioSourceCount < AUDIO_SOURCES_LIST_SIZE; 
-                interactionId++, audioSourceCount++)
-            {
-                PlayInteraction(slideInteractionToPlaySoundList[interactionId]);
-            }
+        }
+
+        private void WriteBackPlayEndTime(Entity entity, int interactionId, double endTime)
+        {
+            if (!EntityManager.HasComponent<CollisionSoundInteractionsComponent>(entity)) return;
+            var interactions = EntityManager.GetComponentData<CollisionSoundInteractionsComponent>(entity);
+            var interaction = interactions[interactionId];
+            interaction.PlayClipEndTime = endTime;
+            interactions[interactionId] = interaction;
+            EntityManager.SetComponentData(entity, interactions);
+        }
+
+        private struct ScoreDescendingComparer : System.Collections.Generic.IComparer<ScoredInteraction>
+        {
+            public int Compare(ScoredInteraction a, ScoredInteraction b) => b.Score.CompareTo(a.Score);
         }
     }
 }

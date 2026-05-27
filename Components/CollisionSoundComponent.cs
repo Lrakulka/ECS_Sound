@@ -2,16 +2,17 @@
 
 namespace ECS_Sound.Components
 {
+    /// <summary>
+    /// Identifies which <see cref="ECS_Sound.AudioConfiguration.CollisionSoundConfiguration"/>
+    /// this entity uses. Clip selection happens at play time (one random clip per impact from the
+    /// configuration's touch/slide arrays), so clip IDs are no longer cached here.
+    /// </summary>
     public readonly struct CollisionSoundComponent : IComponentData
     {
-        public readonly int TouchClipId;
-        public readonly int SlideClipId;
-        public readonly int ConfigurationId; // Contains id of configurations
+        public readonly int ConfigurationId;
 
-        public CollisionSoundComponent(int touchClipId, int slideClipId, int configurationId)
+        public CollisionSoundComponent(int configurationId)
         {
-            TouchClipId = touchClipId;
-            SlideClipId = slideClipId;
             ConfigurationId = configurationId;
         }
     }
