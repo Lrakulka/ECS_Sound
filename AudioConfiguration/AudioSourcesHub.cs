@@ -41,6 +41,7 @@ namespace ECS_Sound.Systems
             slots = new Slot[size];
 
             var template = new GameObject("AudioSource for active CollisionSound 0");
+            Object.DontDestroyOnLoad(template);
             sources[0] = template.AddComponent<AudioSource>();
             template.AddComponent<AutoDisablePlayGameObject>();
             template.SetActive(false);
@@ -48,6 +49,7 @@ namespace ECS_Sound.Systems
             for (var i = 1; i < sources.Length; i++)
             {
                 var instance = Object.Instantiate(template);
+                Object.DontDestroyOnLoad(instance);
                 instance.name = $"AudioSource for active CollisionSound {i}";
                 sources[i] = instance.GetComponent<AudioSource>();
             }
