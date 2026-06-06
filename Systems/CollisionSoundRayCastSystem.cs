@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using ECS_Common.Components;
 using ECS_Common.Utils;
 using ECS_Common.Valzflow.Scripts.ECS_Common.CustomSystemGroups;
 using ECS_Sound.Components;
@@ -43,6 +44,9 @@ namespace ECS_Sound.Systems
 #if UNITY_EDITOR
             if (!Application.isPlaying) return;
 #endif
+            if (SystemAPI.HasSingleton<StopEntityBufferPlayBackComponent>())
+                return;
+            
             var worldSingleton = SystemAPI.GetSingleton<PhysicsWorldSingleton>(); 
             var elapsedTime = SystemAPI.Time.ElapsedTime;
             
