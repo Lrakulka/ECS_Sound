@@ -56,6 +56,9 @@ namespace ECS_Sound.Systems
 
         protected override void OnUpdate()
         {
+#if UNITY_EDITOR
+            if (!Application.isPlaying) return;
+#endif
             var blobRef = SystemAPI.GetSingleton<CollisionSoundBlobReference>();
             ref var blob = ref blobRef.Blob.Value;
 
