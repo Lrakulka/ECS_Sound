@@ -55,7 +55,7 @@ namespace ECS_Sound.Systems
             _lookupActiveSoundSource.Update(ref state);
             _lookupCollisionSoundInteractions.Update(ref state);
 
-            new RayColliderJob
+            new CollisionSoundRayCastJob
             {
                 ElapsedTime = elapsedTime,
                 PhysicsWorld = worldSingleton.PhysicsWorld,
@@ -67,7 +67,7 @@ namespace ECS_Sound.Systems
         }
         
         [BurstCompile]
-        private partial struct RayColliderJob : IJobEntity
+        private partial struct CollisionSoundRayCastJob : IJobEntity
         {
             [ReadOnly]
             public double ElapsedTime;
@@ -87,7 +87,7 @@ namespace ECS_Sound.Systems
                 in RaySoundColliderInfoComponent raySoundColliderInfo, in LocalToWorld consumerLocalToWorld)
             {
                 var rayCastFrom = consumerLocalToWorld.Position;
-                var rayCastTo = consumerLocalToWorld.Position - raySoundColliderInfo.RayPath;
+                var rayCastTo = consumerLocalToWorld.Position - math.max(raySoundColliderInfo.RayPath, 1);
 
                 if (!CommonUtils.RayCast(rayCastFrom, rayCastTo, raySoundColliderInfo.Filter, ref PhysicsWorld.CollisionWorld, out var hit)) return;
                     
